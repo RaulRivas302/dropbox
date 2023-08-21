@@ -19,15 +19,31 @@ const page = () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ code })
+                body: JSON.stringify({ code }),
+                credentials: 'include'  // Include cookies in the request
             })
-                .then(res => res.json())
+                .then(async res => {
+                    const rawText = await res.text();
+                    console.log("Raw response body text:", rawText);
+
+                    let data;
+                    try {
+                        data = JSON.parse(rawText);
+                        console.log(data);
+                    } catch (e) {
+                        console.error("Failed to parse response as JSON:", e);
+                    }
+
+                    return data; // Return the parsed data to the next then() block.
+                })
                 .then(data => {
                     console.log(data);
-                    if (data.access_token) {
-                        window.sessionStorage.setItem('accessToken', data.access_token);
+                    if (data && data.access_token) {
+                        // window.sessionStorage.setItem('accessToken', data.access_token);
+                        // Remove the code from the URL once the token has been fetched successfully
+                        window.history.replaceState({}, document.title, window.location.pathname);
                     } else {
-                        console.error('Failed to obtain access token', data);
+                        console.error('Failed to obtain the access token', data);
                     }
                 })
                 .catch(err => {
@@ -47,26 +63,26 @@ const page = () => {
 
     const createFolder = async () => {
         const folderName = inputValue;
-        const accessToken = sessionStorage.getItem('accessToken');
-        if (!accessToken) {
-            console.log("No access Token availble");
-            return;
-        }
-        const response = await fetch('/api/createFolder', {
+        const response = await fetch('/api/CreateFolder', {
             method: 'POST',
             headers: {
-                "Authorization": `Bearer ${accessToken}`,
+                // "Authorization": `Bearer ${accessToken}`,
                 "Content-Type": 'application/json'
             },
-            body: JSON.stringify({ path: `/${folderName}` })
+            body: JSON.stringify({ path: `/${folderName}` }),
+            credentials: 'include'
         });
-        const data = await response.json();
-
+        // const data = await response.json();
+        // Check if response has content before parsing
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
         if (!response.ok) {
             console.error('Failed to create folder:', data);
             return;
         }
 
+        alert("Created");
+        setInputValue("");
         console.log('Folder created:', data);
     }
     return (
